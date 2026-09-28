@@ -16,7 +16,7 @@ EXAMPLES_DIR=$BUILD_DIR/examples
 CXX=${CXX:-g++}
 CXXFLAGS=${CXXFLAGS:--std=c++20 -Wall -Wextra -Iinclude}
 
-# ── Style ────────────────────────────────────────────────────────────────────
+# Style
 
 if [[ -t 1 && -z ${NO_COLOR:-} ]]; then
 	BOLD=$'\e[1m' DIM=$'\e[2m' RESET=$'\e[0m'
@@ -37,7 +37,7 @@ rule() {
 	printf '%s%s%s\n' "$DIM" "${line// /─}" "$RESET"
 }
 
-# ── Picker ───────────────────────────────────────────────────────────────────
+# Picker
 
 UI_ACTIVE=0
 
@@ -98,7 +98,7 @@ pick() {
 	PICKED=${options[sel]}
 }
 
-# ── Steps ────────────────────────────────────────────────────────────────────
+# Steps
 
 # step NAME OUTPUT CMD... — runs CMD quietly behind a spinner, printing its log only on failure.
 step() {
@@ -133,7 +133,7 @@ step() {
 	return "$status"
 }
 
-# ── Commands ─────────────────────────────────────────────────────────────────
+# Commands
 
 examples() { find examples -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort; }
 
