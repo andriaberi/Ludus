@@ -1,18 +1,12 @@
 #!/usr/bin/env bash
-# Ludus developer CLI, driven by the makefile.
-#
-#   cli.sh build [name]   build the library (src) or an example
-#   cli.sh run   [name]   build and run an example
-#   cli.sh test           run the test suite
-#   cli.sh clean          remove build artifacts
-#
-# Without a name, build and run open an interactive picker.
+# Ludus developer CLI, driven by the makefile. Run `tools/cli.sh help` for usage.
 
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
 BUILD_DIR=${BUILD_DIR:-build}
 EXAMPLES_DIR=$BUILD_DIR/examples
+VERSION_FILE=CMakeLists.txt
 CXX=${CXX:-g++}
 CXXFLAGS=${CXXFLAGS:--std=c++20 -Wall -Wextra -Iinclude}
 
@@ -135,6 +129,25 @@ step() {
 
 # Commands
 
+cmd_help() {
+	local A=$ACCENT R=$RESET B=$BOLD D=$DIM
+	cat <<EOF
+${B}Ludus${R} ${D}— make <command>${R}
+
+${B}Develop${R}
+  ${A}build${R}     Build the library or an example     ${D}make build NAME=src|<example>${R}
+  ${A}run${R}       Build and run an example            ${D}make run NAME=<example>${R}
+  ${A}test${R}      Run the tests
+  ${A}clean${R}     Remove build artifacts
+
+${B}Version${R}
+  ${A}version${R}   Print the current version
+  ${A}bump${R}      Bump the version                    ${D}make bump TO=patch|minor|major|1.2.3${R}
+
+${D}Without NAME, build and run open a picker.${R}
+EOF
+}
+
 examples() { find examples -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort; }
 
 # resolve_name TITLE NAME OPTION... — sets PICKED from NAME, or from the picker.
@@ -184,7 +197,34 @@ cmd_test() { note "Tests are not implemented yet"; }
 
 cmd_clean() { rm -rf "$BUILD_DIR"; ok "Removed $BUILD_DIR/"; }
 
-case ${1:-} in
-	build|run|test|clean) cmd=$1; shift; "cmd_$cmd" "$@" ;;
-	*) sed -n '2,9s/^# \{0,1\}//p' "$0"; exit 1 ;;
+# The project() VERSION in CMakeLists.txt.
+current_version() { sed -n 's/^ *VERSION \([^ ]*\)$/\1/p' "$VERSION_FILE"; }
+
+cmd_version() { current_version; }
+
+cmd_bump() {
+	local to=${1:-patch} old new major minor patch
+	old=$(current_version)
+	if [[ ! $old =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+		fail "No X.Y.Z VERSION in $VERSION_FILE"; exit 1
+	fi
+	IFS=. read -r major minor patch <<<"$old"
+	case $to in
+		major) new="$((major + 1)).0.0" ;;
+		minor) new="$major.$((minor + 1)).0" ;;
+		patch) new="$major.$minor.$((patch + 1))" ;;
+		*)
+			if [[ ! $to =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+				fail "TO must be patch, minor, major or X.Y.Z, got '$to'"; exit 1
+			fi
+			new=$to ;;
+	esac
+	sed "s/^\( *VERSION \)$old$/\1$new/" "$VERSION_FILE" >"$VERSION_FILE.tmp" \
+		&& mv "$VERSION_FILE.tmp" "$VERSION_FILE"
+	ok "Bumped version $DIM$old → $new$RESET"
+}
+
+case ${1:-help} in
+	help|build|run|test|clean|version|bump) cmd=$1; shift; "cmd_$cmd" "$@" ;;
+	*) fail "Unknown command '$1'"; printf '\n' >&2; cmd_help >&2; exit 1 ;;
 esac
