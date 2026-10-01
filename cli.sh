@@ -135,14 +135,16 @@ cmd_help() {
 	cat <<EOF
 ${B}Ludus${R} ${D}— make <command>${R}
 
-${B}Develop${R}
+${B}Build${R}
   ${A}build${R}     Build the library or an example     ${D}make build NAME=src|<example>${R}
   ${A}run${R}       Build and run an example            ${D}make run NAME=<example>${R}
-  ${A}test${R}      Run the tests
-  ${A}check${R}     Build everything and test (what CI runs)
   ${A}clean${R}     Remove build artifacts
 
-${B}Version${R}
+${B}Test${R}
+  ${A}test${R}      Run the tests                       ${D}not implemented yet${R}
+  ${A}check${R}     Build everything and test           ${D}what CI runs${R}
+
+${B}Project${R}
   ${A}version${R}   Print the current version
   ${A}bump${R}      Bump the version                    ${D}make bump TO=patch|minor|major|1.2.3${R}
 
@@ -244,6 +246,6 @@ cmd_bump() {
 }
 
 case ${1:-help} in
-	help|build|run|test|check|clean|version|bump) cmd=$1; shift; "cmd_$cmd" "$@" ;;
+	help|build|run|clean|test|check|version|bump) cmd=$1; shift; "cmd_$cmd" "$@" ;;
 	*) fail "Unknown command '$1'"; printf '\n' >&2; cmd_help >&2; exit 1 ;;
 esac
