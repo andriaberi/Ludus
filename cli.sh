@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Ludus developer CLI, driven by the makefile. Run `tools/cli.sh help` for usage.
+# Ludus developer CLI, driven by the makefile. Run `./cli.sh help` for usage.
 
 set -uo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")"
 
 BUILD_DIR=${BUILD_DIR:-build}
 EXAMPLES_DIR=$BUILD_DIR/examples
@@ -12,7 +12,8 @@ CXXFLAGS=${CXXFLAGS:--std=c++20 -Wall -Wextra -Iinclude}
 
 # Style
 
-if [[ -t 1 && -z ${NO_COLOR:-} ]]; then
+# Colour on a terminal or in GitHub Actions; NO_COLOR turns it off.
+if [[ -z ${NO_COLOR:-} && ( -t 1 || -n ${GITHUB_ACTIONS:-} ) ]]; then
 	BOLD=$'\e[1m' DIM=$'\e[2m' RESET=$'\e[0m'
 	ACCENT=$'\e[36m' GREEN=$'\e[32m' RED=$'\e[31m' YELLOW=$'\e[33m'
 	CXXFLAGS+=" -fdiagnostics-color=always"
@@ -138,6 +139,7 @@ ${B}Develop${R}
   ${A}build${R}     Build the library or an example     ${D}make build NAME=src|<example>${R}
   ${A}run${R}       Build and run an example            ${D}make run NAME=<example>${R}
   ${A}test${R}      Run the tests
+  ${A}check${R}     Build everything and test (what CI runs)
   ${A}clean${R}     Remove build artifacts
 
 ${B}Version${R}
@@ -195,6 +197,23 @@ cmd_run() {
 
 cmd_test() { note "Tests are not implemented yet"; }
 
+cmd_check() {
+	local status=0 name list
+	mapfile -t list < <(examples)
+	build_library || status=1
+	for name in "${list[@]}"; do
+		build_example "$name" || status=1
+	done
+	cmd_test || status=1
+	printf '\n'
+	if (( status == 0 )); then
+		printf '%s%sAll checks passed.%s\n' "$GREEN" "$BOLD" "$RESET"
+	else
+		printf '%s%sChecks failed.%s\n' "$RED" "$BOLD" "$RESET"
+	fi
+	return "$status"
+}
+
 cmd_clean() { rm -rf "$BUILD_DIR"; ok "Removed $BUILD_DIR/"; }
 
 # The project() VERSION in CMakeLists.txt.
@@ -225,6 +244,6 @@ cmd_bump() {
 }
 
 case ${1:-help} in
-	help|build|run|test|clean|version|bump) cmd=$1; shift; "cmd_$cmd" "$@" ;;
+	help|build|run|test|check|clean|version|bump) cmd=$1; shift; "cmd_$cmd" "$@" ;;
 	*) fail "Unknown command '$1'"; printf '\n' >&2; cmd_help >&2; exit 1 ;;
 esac
